@@ -7,6 +7,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrivateRoute } from './components/PrivateRoute';
 import { Layout } from './components/Layout/Layout';
 
@@ -27,10 +29,12 @@ import { ProjetoDetailsCliente } from './pages/cliente/ProjetoDetailsCliente';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <Layout>
-          <Routes>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <NotificationProvider>
+            <Layout>
+              <Routes>
             {/* Rota pública */}
             <Route path="/login" element={<Login />} />
 
