@@ -1,6 +1,7 @@
 // src/types/index.ts
 /**
  * Tipos e interfaces principais do sistema de timeline de projetos
+ * Atualizado com a fase Tração
  */
 
 // Tipos de usuário
@@ -43,8 +44,8 @@ export interface Projeto {
   cliente?: Cliente;
 }
 
-// Tipos de fases
-export type FaseNome = 'diagnostico' | 'posicionamento';
+// Tipos de fases - ATUALIZADO COM TRAÇÃO
+export type FaseNome = 'diagnostico' | 'posicionamento' | 'tracao';
 
 // Interface de fase
 export interface Fase {
@@ -85,6 +86,20 @@ export const ETAPAS_POSICIONAMENTO = [
   'Plano de ação',
   'Criação de linha editorial',
   'Posicionamento'
+] as const;
+
+// NOVO: Etapas da fase Tração
+export const ETAPAS_TRACAO = [
+  'Tráfego e Comercial - Construção do funil',
+  'Tráfego e Comercial - Planejamento de campanha',
+  'Gestor de tráfego - Anúncios com foco em performance',
+  'Comercial - Implantação ou reestruturação de CRM',
+  'Comercial - Script de prospecção',
+  'Comercial - Estruturação de pitch comercial por persona',
+  'Comercial - Diretrizes de argumentação de vendas',
+  'Comercial - Treinamento de time comercial',
+  'Comercial - CRM (trabalho de base/conversão)',
+  'Comercial - Pesquisa com clientes'
 ] as const;
 
 // Interface de timeline do projeto

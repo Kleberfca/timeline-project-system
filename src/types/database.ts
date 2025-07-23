@@ -1,18 +1,10 @@
 // src/types/database.ts
 /**
- * Tipos gerados automaticamente pelo Supabase
- * Execute: supabase gen types typescript --project-id seu-projeto > src/types/database.ts
+ * Tipos do banco de dados gerados pelo Supabase
+ * Atualizado com a fase Tração
  */
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
-
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       users: {
@@ -114,17 +106,17 @@ export interface Database {
       fases: {
         Row: {
           id: string
-          nome: 'diagnostico' | 'posicionamento'
+          nome: 'diagnostico' | 'posicionamento' | 'tracao'
           ordem: number
         }
         Insert: {
           id?: string
-          nome: 'diagnostico' | 'posicionamento'
+          nome: 'diagnostico' | 'posicionamento' | 'tracao'
           ordem: number
         }
         Update: {
           id?: string
-          nome?: 'diagnostico' | 'posicionamento'
+          nome?: 'diagnostico' | 'posicionamento' | 'tracao'
           ordem?: number
         }
       }

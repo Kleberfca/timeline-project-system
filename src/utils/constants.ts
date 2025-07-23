@@ -2,6 +2,7 @@
 /**
  * Constantes globais do sistema
  * Centraliza valores fixos utilizados em toda a aplicação
+ * Atualizado com a fase Tração
  */
 
 // Configurações de paginação
@@ -60,13 +61,14 @@ export const USER_ROLES = {
   CLIENTE: 'cliente'
 } as const;
 
-// Fases do projeto
+// Fases do projeto - ATUALIZADO COM TRAÇÃO
 export const FASES = {
   DIAGNOSTICO: 'diagnostico',
-  POSICIONAMENTO: 'posicionamento'
+  POSICIONAMENTO: 'posicionamento',
+  TRACAO: 'tracao'
 } as const;
 
-// Etapas por fase
+// Etapas por fase - ATUALIZADO COM FASE TRAÇÃO
 export const ETAPAS_POR_FASE = {
   [FASES.DIAGNOSTICO]: [
     'Análise da situação atual',
@@ -84,6 +86,18 @@ export const ETAPAS_POR_FASE = {
     'Plano de ação',
     'Criação de linha editorial',
     'Posicionamento'
+  ],
+  [FASES.TRACAO]: [
+    'Tráfego e Comercial - Construção do funil',
+    'Tráfego e Comercial - Planejamento de campanha',
+    'Gestor de tráfego - Anúncios com foco em performance',
+    'Comercial - Implantação ou reestruturação de CRM',
+    'Comercial - Script de prospecção',
+    'Comercial - Estruturação de pitch comercial por persona',
+    'Comercial - Diretrizes de argumentação de vendas',
+    'Comercial - Treinamento de time comercial',
+    'Comercial - CRM (trabalho de base/conversão)',
+    'Comercial - Pesquisa com clientes'
   ]
 } as const;
 

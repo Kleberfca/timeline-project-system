@@ -1,13 +1,14 @@
 // src/pages/admin/ProjetoForm.tsx
 /**
  * Formulário para criar/editar projetos
+ * Atualizado para incluir a fase Tração
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { projetoQueries, clienteQueries } from '../../lib/supabase-queries';
 import { supabase } from '../../lib/supabase';
-import { ETAPAS_DIAGNOSTICO, ETAPAS_POSICIONAMENTO } from '../../types';
+import { ETAPAS_DIAGNOSTICO, ETAPAS_POSICIONAMENTO, ETAPAS_TRACAO } from '../../types';
 import type { Cliente, Projeto } from '../../types';
 
 export const ProjetoForm: React.FC = () => {
@@ -65,6 +66,7 @@ export const ProjetoForm: React.FC = () => {
 
   /**
    * Cria estrutura inicial da timeline
+   * ATUALIZADO: Incluindo fase Tração
    */
   const createInitialTimeline = async (projetoId: string) => {
     // Busca IDs das fases
@@ -74,8 +76,9 @@ export const ProjetoForm: React.FC = () => {
 
     const faseDiagnostico = fases?.find(f => f.nome === 'diagnostico');
     const fasePosicionamento = fases?.find(f => f.nome === 'posicionamento');
+    const faseTracao = fases?.find(f => f.nome === 'tracao');
 
-    if (!faseDiagnostico || !fasePosicionamento) {
+    if (!faseDiagnostico || !fasePosicionamento || !faseTracao) {
       throw new Error('Fases não encontradas no banco');
     }
 
@@ -169,7 +172,7 @@ export const ProjetoForm: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6">
+          <div className="space-y-4">
             <div>
               <label htmlFor="cliente_id" className="block text-sm font-medium text-gray-700">
                 Cliente *
@@ -267,6 +270,7 @@ export const ProjetoForm: React.FC = () => {
             )}
           </div>
 
+          {/* Info box atualizado com 3 fases */}
           {!isEdit && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex">
@@ -277,11 +281,12 @@ export const ProjetoForm: React.FC = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-blue-700">
-                    Ao criar o projeto, a timeline será criada automaticamente com todas as etapas das duas fases:
+                    Ao criar o projeto, a timeline será criada automaticamente com todas as etapas das três fases:
                   </p>
                   <ul className="mt-2 text-sm text-blue-600 list-disc list-inside">
                     <li>Fase 1 - Diagnóstico: {ETAPAS_DIAGNOSTICO.length} etapas</li>
                     <li>Fase 2 - Posicionamento: {ETAPAS_POSICIONAMENTO.length} etapas</li>
+                    <li>Fase 3 - Tração: {ETAPAS_TRACAO.length} etapas</li>
                   </ul>
                 </div>
               </div>

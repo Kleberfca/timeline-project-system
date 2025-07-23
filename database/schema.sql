@@ -1,5 +1,6 @@
 -- database/schema.sql
 -- Schema completo do banco de dados para o Timeline Project System
+-- Atualizado com a fase Tração
 -- Execute este script no editor SQL do Supabase
 
 -- Habilitar extensões necessárias
@@ -45,10 +46,10 @@ CREATE TABLE IF NOT EXISTS projetos (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela de fases
+-- Tabela de fases - ATUALIZADA COM TRAÇÃO
 CREATE TABLE IF NOT EXISTS fases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nome TEXT UNIQUE NOT NULL CHECK (nome IN ('diagnostico', 'posicionamento')),
+    nome TEXT UNIQUE NOT NULL CHECK (nome IN ('diagnostico', 'posicionamento', 'tracao')),
     ordem INTEGER NOT NULL
 );
 
@@ -127,13 +128,14 @@ CREATE TRIGGER update_projeto_timeline_updated_at BEFORE UPDATE ON projeto_timel
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
--- DADOS INICIAIS
+-- DADOS INICIAIS - ATUALIZADO COM FASE TRAÇÃO
 -- ============================================
 
 -- Inserir fases
 INSERT INTO fases (nome, ordem) VALUES 
     ('diagnostico', 1),
-    ('posicionamento', 2)
+    ('posicionamento', 2),
+    ('tracao', 3)
 ON CONFLICT (nome) DO NOTHING;
 
 -- Inserir etapas da fase Diagnóstico
@@ -173,6 +175,39 @@ LATERAL (VALUES
 WHERE f.nome = 'posicionamento'
 ON CONFLICT (fase_id, ordem) DO NOTHING;
 
+-- Inserir etapas da fase Tração
+INSERT INTO etapas (fase_id, nome, descricao, ordem)
+SELECT 
+    f.id,
+    etapa.nome,
+    etapa.descricao,
+    etapa.ordem
+FROM fases f,
+LATERAL (VALUES
+    ('Tráfego e Comercial - Construção do funil', 
+     'Desenvolvimento e estruturação do funil de vendas para otimização de conversões', 1),
+    ('Tráfego e Comercial - Planejamento de campanha', 
+     'Planejamento estratégico de campanhas de marketing e tráfego', 2),
+    ('Gestor de tráfego - Anúncios com foco em performance', 
+     'Criação e gestão de anúncios otimizados para performance e conversão', 3),
+    ('Comercial - Implantação ou reestruturação de CRM', 
+     'Implementação ou melhoria do sistema de gestão de relacionamento com cliente', 4),
+    ('Comercial - Script de prospecção', 
+     'Desenvolvimento de scripts eficazes para abordagem e prospecção de clientes', 5),
+    ('Comercial - Estruturação de pitch comercial por persona', 
+     'Criação de apresentações comerciais personalizadas para cada perfil de cliente', 6),
+    ('Comercial - Diretrizes de argumentação de vendas', 
+     'Definição de argumentos e técnicas de vendas para superar objeções', 7),
+    ('Comercial - Treinamento de time comercial', 
+     'Capacitação e desenvolvimento da equipe de vendas', 8),
+    ('Comercial - CRM (trabalho de base/conversão)', 
+     'Trabalho de base para conversão de não compra e estratégias de recompra', 9),
+    ('Comercial - Pesquisa com clientes', 
+     'Realização de pesquisas para entender satisfação e necessidades dos clientes', 10)
+) AS etapa(nome, descricao, ordem)
+WHERE f.nome = 'tracao'
+ON CONFLICT (fase_id, ordem) DO NOTHING;
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
@@ -196,16 +231,8 @@ CREATE POLICY "Admins can view all users" ON users
         )
     );
 
-CREATE POLICY "Admins can manage users" ON users
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
-
 -- Políticas para clientes
-CREATE POLICY "Admins can manage clientes" ON clientes
+CREATE POLICY "Admins can manage clients" ON clientes
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM users 
@@ -222,7 +249,7 @@ CREATE POLICY "Clients can view own data" ON clientes
     );
 
 -- Políticas para projetos
-CREATE POLICY "Admins can manage all projects" ON projetos
+CREATE POLICY "Admins can manage projects" ON projetos
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM users 
@@ -311,7 +338,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 COMMENT ON TABLE users IS 'Usuários do sistema integrados com Supabase Auth';
 COMMENT ON TABLE clientes IS 'Clientes da empresa';
 COMMENT ON TABLE projetos IS 'Projetos dos clientes';
-COMMENT ON TABLE fases IS 'Fases fixas do processo (Diagnóstico e Posicionamento)';
+COMMENT ON TABLE fases IS 'Fases fixas do processo (Diagnóstico, Posicionamento e Tração)';
 COMMENT ON TABLE etapas IS 'Etapas de cada fase';
 COMMENT ON TABLE projeto_timeline IS 'Status de cada etapa por projeto';
 COMMENT ON TABLE arquivos IS 'Arquivos enviados para cada etapa';
