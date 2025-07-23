@@ -115,7 +115,7 @@ export const ProjetoForm: React.FC = () => {
     try {
       if (isEdit) {
         // Atualiza projeto existente
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('projetos')
           .update(formData)
           .eq('id', id)
