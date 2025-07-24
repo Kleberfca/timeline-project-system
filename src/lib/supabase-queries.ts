@@ -112,6 +112,19 @@ export const projetoQueries = {
       .single();
     
     if (error) handleSupabaseError(error);
+    
+    // Ordena a timeline por fase.ordem e depois por etapa.ordem
+    if (data?.timeline) {
+      data.timeline.sort((a: any, b: any) => {
+        // Primeiro ordena por fase
+        const faseComparison = (a.etapa?.fase?.ordem || 0) - (b.etapa?.fase?.ordem || 0);
+        if (faseComparison !== 0) return faseComparison;
+        
+        // Depois ordena por etapa dentro da mesma fase
+        return (a.etapa?.ordem || 0) - (b.etapa?.ordem || 0);
+      });
+    }
+    
     return data;
   },
 
@@ -166,7 +179,7 @@ export const timelineQueries = {
   },
 
   /**
-   * Busca timeline por projeto e fase
+   * Busca timeline por projeto e fase - CORRIGIDO
    */
   async buscarPorProjetoFase(projetoId: string, faseNome: string) {
     const { data, error } = await supabase
@@ -180,11 +193,16 @@ export const timelineQueries = {
         arquivos(*)
       `)
       .eq('projeto_id', projetoId)
-      .eq('etapa.fase.nome', faseNome)
-      .order('etapa.ordem');
+      .eq('etapa.fase.nome', faseNome);
     
     if (error) handleSupabaseError(error);
-    return data;
+    
+    // Ordena por etapa.ordem no JavaScript
+    const sortedData = data?.sort((a: any, b: any) => {
+      return (a.etapa?.ordem || 0) - (b.etapa?.ordem || 0);
+    });
+    
+    return sortedData;
   }
 };
 
