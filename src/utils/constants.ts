@@ -197,3 +197,21 @@ export const API_CONFIG = {
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000
 } as const;
+
+// Paleta de cores atualizada
+export const COLORS = {
+  brand: {
+    blue: '#011efe',
+    dark: '#1a1a1a',
+    black: '#000000',
+    gray: '#515151',
+    light: '#aaaaaa',
+    lighter: '#ededed',
+  },
+  status: {
+    success: '#10b981',
+    warning: '#f59e0b',
+    info: '#3b82f6',
+    error: '#ef4444',
+  }
+} as const;

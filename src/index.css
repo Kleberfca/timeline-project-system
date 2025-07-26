@@ -1,6 +1,7 @@
 /* src/index.css */
 /**
  * Estilos globais com Tailwind CSS
+ * Atualizado com utilitários para responsividade
  */
 @tailwind base;
 @tailwind components;
@@ -9,16 +10,114 @@
 /* Customizações globais */
 @layer base {
   body {
-    @apply antialiased;
+    @apply antialiased text-brand-dark;
+  }
+
+  /* Scroll suave */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visível para acessibilidade */
+  *:focus {
+    @apply outline-none ring-2 ring-brand-blue ring-opacity-50;
   }
 }
 
-/* Utilitário para limitar linhas de texto */
+/* Componentes customizados */
+@layer components {
+  /* Botão primário */
+  .btn-primary {
+    @apply px-4 py-2 bg-brand-blue text-white rounded-lg 
+           hover:bg-blue-700 transition-colors duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Botão secundário */
+  .btn-secondary {
+    @apply px-4 py-2 border border-brand-light text-brand-gray 
+           rounded-lg hover:bg-brand-lighter transition-colors duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Card padrão */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-brand-lighter p-6;
+  }
+
+  /* Container responsivo */
+  .container-responsive {
+    @apply w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl;
+  }
+}
+
+/* Utilitários customizados */
 @layer utilities {
+  /* Limitar linhas de texto */
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Animação de fade */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Esconder scrollbar mantendo funcionalidade */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Grid responsivo para timeline */
+  .timeline-grid {
+    @apply grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Sombra suave */
+  .shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Media queries customizadas para casos específicos */
+@media (max-width: 480px) {
+  /* Mobile pequeno */
+  .mobile-small-padding {
+    @apply px-3 py-2;
+  }
+}
+
+/* Impressão */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    @apply text-black bg-white;
   }
 }

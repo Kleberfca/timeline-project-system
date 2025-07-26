@@ -273,7 +273,7 @@ class GoogleDriveService {
 }
 
 // Instância singleton
-const googleDriveService = new GoogleDriveService();
+export const googleDriveService = new GoogleDriveService();
 
 /**
  * Função helper para upload completo
