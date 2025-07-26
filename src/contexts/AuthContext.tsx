@@ -1,133 +1,96 @@
 // src/contexts/AuthContext.tsx
 /**
  * Contexto de autenticação
- * Gerencia estado de autenticação e informações do usuário
+ * Gerencia estado do usuário e operações de login/logout
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import type { User } from '../types';
+import { supabase, getUserProfile } from '../lib/supabase';
+import type { User, AuthContextType } from '../types';
 
-interface AuthContextData {
-  user: User | null;
-  loading: boolean;
-  isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshUser: () => Promise<void>; // ADICIONAR ESTA LINHA
-}
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
-};
-
+/**
+ * Provider de autenticação
+ * Envolve toda a aplicação para fornecer contexto de auth
+ */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Verifica se o usuário é admin
-  const isAdmin = user?.role === 'admin';
+  /**
+   * Carrega dados do usuário do perfil
+   */
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const profile = await getUserProfile(userId);
+      setUser(profile);
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+      // Se falhar ao carregar perfil, faz logout
+      await signOut();
+    }
+  };
 
   /**
-   * Carrega dados do usuário autenticado
+   * Verifica sessão ativa ao carregar
    */
-  const loadUser = async () => {
-    try {
-      setLoading(true);
-      
-      // Obtém usuário autenticado do Supabase
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (authUser) {
-        // Busca dados completos do usuário no banco
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-        
-        if (error) throw error;
-        
-        setUser(userData);
+  useEffect(() => {
+    // Verifica sessão inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
       } else {
-        setUser(null);
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  /**
-   * ADICIONAR ESTA FUNÇÃO - Atualiza dados do usuário
-   */
-  const refreshUser = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (authUser) {
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-        
-        if (error) throw error;
-        
-        if (userData) {
-          setUser(userData);
+    // Escuta mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await loadUserProfile(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          navigate('/login');
         }
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
-    }
-  };
+    );
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   /**
    * Realiza login
    */
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      // Autentica com Supabase
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
-      if (authError) throw authError;
-      
-      if (authData.user) {
-        // Busca dados completos do usuário
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
-        
-        if (userError) throw userError;
-        
-        setUser(userData);
+
+      if (error) throw error;
+
+      if (data.user) {
+        await loadUserProfile(data.user.id);
         
         // Redireciona baseado no tipo de usuário
-        if (userData.role === 'admin') {
+        const profile = await getUserProfile(data.user.id);
+        if (profile.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
           navigate('/cliente/projetos');
         }
       }
     } catch (error: any) {
-      console.error('Erro no login:', error);
       throw new Error(error.message || 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -135,50 +98,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Realiza logout
    */
   const signOut = async () => {
+    setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
       setUser(null);
       navigate('/login');
-    } catch (error) {
-      console.error('Erro no logout:', error);
+    } catch (error: any) {
+      console.error('Erro ao fazer logout:', error);
+      throw new Error(error.message || 'Erro ao fazer logout');
+    } finally {
+      setLoading(false);
     }
   };
 
-  /**
-   * Monitora mudanças na autenticação
-   */
-  useEffect(() => {
-    // Carrega usuário inicial
-    loadUser();
+  // Computed: verifica se é admin
+  const isAdmin = user?.role === 'admin';
 
-    // Escuta mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await loadUser();
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  const value: AuthContextType = {
+    user,
+    loading,
+    signIn,
+    signOut,
+    isAdmin
+  };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      isAdmin, 
-      signIn, 
-      signOut,
-      refreshUser // ADICIONAR AQUI
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+/**
+ * Hook para usar o contexto de autenticação
+ */
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };

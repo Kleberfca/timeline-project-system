@@ -93,7 +93,7 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -110,51 +110,54 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Tabs de navegação */}
-      <div className="border-b border-brand-lighter">
+      {/* Tabs de fases - ATUALIZADO COM 3 ABAS */}
+      <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('diagnostico')}
             className={`
-              py-2 px-1 border-b-2 font-medium text-sm transition-colors
+              whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm
               ${activeTab === 'diagnostico'
-                ? 'border-brand-blue text-brand-blue'
-                : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
           >
             Fase 1: Diagnóstico
-            <span className="ml-2 text-xs text-brand-gray">
+            <span className="ml-2 text-xs text-gray-500">
               ({getEtapasByFase('diagnostico')} etapas)
             </span>
           </button>
+          
           <button
             onClick={() => setActiveTab('posicionamento')}
             className={`
-              py-2 px-1 border-b-2 font-medium text-sm transition-colors
+              whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm
               ${activeTab === 'posicionamento'
-                ? 'border-brand-blue text-brand-blue'
-                : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
           >
             Fase 2: Posicionamento
-            <span className="ml-2 text-xs text-brand-gray">
+            <span className="ml-2 text-xs text-gray-500">
               ({getEtapasByFase('posicionamento')} etapas)
             </span>
           </button>
+          
+          {/* NOVA ABA: Fase 3 - Tração */}
           <button
             onClick={() => setActiveTab('tracao')}
             className={`
-              py-2 px-1 border-b-2 font-medium text-sm transition-colors
+              whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm
               ${activeTab === 'tracao'
-                ? 'border-brand-blue text-brand-blue'
-                : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
           >
             Fase 3: Tração
-            <span className="ml-2 text-xs text-brand-gray">
+            <span className="ml-2 text-xs text-gray-500">
               ({getEtapasByFase('tracao')} etapas)
             </span>
           </button>
@@ -164,14 +167,14 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
       {/* Barra de progresso */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-brand-dark">
+          <h3 className="text-sm font-medium text-gray-700">
             Progresso da Fase {activeTab === 'diagnostico' ? 'Diagnóstico' : activeTab === 'posicionamento' ? 'Posicionamento' : 'Tração'}
           </h3>
-          <span className="text-sm font-semibold text-brand-dark">{progress}%</span>
+          <span className="text-sm font-semibold text-gray-900">{progress}%</span>
         </div>
-        <div className="w-full bg-brand-lighter rounded-full h-2">
+        <div className="w-full bg-gray-200 rounded-full h-2">
           <div
-            className="bg-brand-blue h-2 rounded-full transition-all duration-500"
+            className="bg-blue-600 h-2 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -180,16 +183,15 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
       {/* Timeline visual */}
       <div className="relative">
         {/* Linha horizontal de conexão */}
-        <div className="absolute top-20 left-0 right-0 h-0.5 bg-brand-light" />
+        <div className="absolute top-20 left-0 right-0 h-0.5 bg-gray-300" />
         
-        {/* Cards das etapas - Responsivo */}
+        {/* Cards das etapas */}
         <div className={`
           grid gap-6
-          grid-cols-1
-          sm:grid-cols-2
-          lg:grid-cols-3
-          xl:grid-cols-4
-          ${timelineData.length > 6 ? '2xl:grid-cols-5' : ''}
+          ${timelineData.length <= 4 
+            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' 
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+          }
         `}>
           {timelineData.map((item, index) => (
             <TimelineCard
@@ -205,18 +207,18 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
 
       {/* Informação adicional para fase Tração */}
       {activeTab === 'tracao' && (
-        <div className="bg-blue-50 border border-brand-blue/20 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-brand-blue" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-brand-dark">
+              <h3 className="text-sm font-medium text-blue-800">
                 Fase de Tração
               </h3>
-              <div className="mt-2 text-sm text-brand-gray">
+              <div className="mt-2 text-sm text-blue-700">
                 <p>Esta fase foca em ações práticas para gerar resultados, incluindo:</p>
                 <ul className="list-disc list-inside mt-1">
                   <li>Estratégias de tráfego e funil de vendas</li>
@@ -229,21 +231,21 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
         </div>
       )}
 
-      {/* Legenda - Responsiva */}
+      {/* Legenda */}
       <div className="bg-white rounded-lg shadow p-4">
-        <h4 className="text-sm font-medium text-brand-dark mb-3">Legenda</h4>
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Legenda</h4>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center">
             <div className={`w-4 h-4 rounded ${STATUS_COLORS.pendente.bg} ${STATUS_COLORS.pendente.border} border mr-2`} />
-            <span className="text-sm text-brand-gray">Pendente</span>
+            <span className="text-sm text-gray-600">Pendente</span>
           </div>
           <div className="flex items-center">
             <div className={`w-4 h-4 rounded ${STATUS_COLORS.em_andamento.bg} ${STATUS_COLORS.em_andamento.border} border mr-2`} />
-            <span className="text-sm text-brand-gray">Em Andamento</span>
+            <span className="text-sm text-gray-600">Em Andamento</span>
           </div>
           <div className="flex items-center">
             <div className={`w-4 h-4 rounded ${STATUS_COLORS.concluido.bg} ${STATUS_COLORS.concluido.border} border mr-2`} />
-            <span className="text-sm text-brand-gray">Concluído</span>
+            <span className="text-sm text-gray-600">Concluído</span>
           </div>
         </div>
       </div>

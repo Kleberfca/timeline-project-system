@@ -9,8 +9,7 @@ import type {
   Projeto, 
   ProjetoTimeline, 
   Arquivo,
-  StatusEtapa,
-  SistemaConfig
+  StatusEtapa 
 } from '../types';
 
 // Queries para Clientes
@@ -293,58 +292,5 @@ export const realtimeSubscriptions = {
         callback
       )
       .subscribe();
-  }
-  
-};
-
-// Queries para configurações do sistema
-export const sistemaConfigQueries = {
-  /**
-   * Busca configurações do sistema
-   */
-  async buscar() {
-    const { data, error } = await supabase
-      .from('sistema_config')
-      .select('*')
-      .single();
-    
-    if (error) handleSupabaseError(error);
-    return data as SistemaConfig;
-  },
-
-  /**
-   * Atualiza logo
-   */
-  async atualizarLogo(logoUrl: string, logoDriveId: string) {
-    const { data, error } = await supabase
-      .from('sistema_config')
-      .update({
-        logo_url: logoUrl,
-        logo_drive_id: logoDriveId,
-      })
-      .eq('id', '00000000-0000-0000-0000-000000000000')
-      .select()
-      .single();
-    
-    if (error) handleSupabaseError(error);
-    return data as SistemaConfig;
-  },
-
-  /**
-   * Atualiza favicon
-   */
-  async atualizarFavicon(faviconUrl: string, faviconDriveId: string) {
-    const { data, error } = await supabase
-      .from('sistema_config')
-      .update({
-        favicon_url: faviconUrl,
-        favicon_drive_id: faviconDriveId,
-      })
-      .eq('id', '00000000-0000-0000-0000-000000000000')
-      .select()
-      .single();
-    
-    if (error) handleSupabaseError(error);
-    return data as SistemaConfig;
   }
 };
