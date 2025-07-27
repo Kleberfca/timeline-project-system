@@ -1,19 +1,20 @@
 // src/hooks/useSystemConfig.tsx
 /**
  * Hook para gerenciar configurações do sistema
- * Inclui logo, favicon e outras configurações globais
+ * Suporta tanto Google Drive quanto base64
  */
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { realtimeSubscriptions } from '../lib/supabase-queries';
 
 interface SystemConfig {
   id: string;
   logo_url: string | null;
   logo_drive_id: string | null;
+  logo_base64: string | null;
   favicon_url: string | null;
   favicon_drive_id: string | null;
+  favicon_base64: string | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -22,10 +23,14 @@ interface UseSystemConfigReturn {
   config: SystemConfig | null;
   logo: string | null;
   favicon: string | null;
+  logoSource: 'base64' | 'drive' | null;
+  faviconSource: 'base64' | 'drive' | null;
   loading: boolean;
   error: string | null;
   updateLogo: (url: string, driveId: string) => Promise<void>;
   updateFavicon: (url: string, driveId: string) => Promise<void>;
+  updateLogoBase64: (base64: string | null) => Promise<void>;
+  updateFaviconBase64: (base64: string | null) => Promise<void>;
 }
 
 export const useSystemConfig = (): UseSystemConfigReturn => {
@@ -49,10 +54,13 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
         },
         (payload) => {
           if (payload.eventType === 'UPDATE') {
-            setConfig(payload.new as SystemConfig);
-            // Atualiza favicon no DOM se mudou
-            if (payload.new.favicon_url) {
-              updateFaviconInDOM(payload.new.favicon_url);
+            const newConfig = payload.new as SystemConfig;
+            setConfig(newConfig);
+            
+            // Atualiza favicon no DOM
+            const favicon = newConfig.favicon_base64 || newConfig.favicon_url;
+            if (favicon) {
+              updateFaviconInDOM(favicon);
             }
           }
         }
@@ -76,9 +84,10 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
 
       setConfig(data);
       
-      // Aplica favicon se existir
-      if (data?.favicon_url) {
-        updateFaviconInDOM(data.favicon_url);
+      // Aplica favicon se existir (prioriza base64)
+      const favicon = data?.favicon_base64 || data?.favicon_url;
+      if (favicon) {
+        updateFaviconInDOM(favicon);
       }
     } catch (err: any) {
       setError(err.message);
@@ -90,20 +99,28 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
   /**
    * Atualiza o favicon no DOM
    */
-  const updateFaviconInDOM = (faviconUrl: string) => {
+  const updateFaviconInDOM = (favicon: string) => {
     // Remove favicons existentes
     const existingFavicons = document.querySelectorAll("link[rel*='icon']");
-    existingFavicons.forEach(favicon => favicon.remove());
+    existingFavicons.forEach(f => f.remove());
 
-    // Adiciona novo favicon
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    link.href = faviconUrl;
-    document.head.appendChild(link);
+    // Se for base64, usa direto
+    if (favicon.startsWith('data:')) {
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.href = favicon;
+      document.head.appendChild(link);
+    } else {
+      // Se for URL, cria link normal
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.href = favicon;
+      document.head.appendChild(link);
+    }
   };
 
   /**
-   * Atualiza logo do sistema
+   * Atualiza logo via Google Drive
    */
   const updateLogo = async (url: string, driveId: string) => {
     try {
@@ -112,11 +129,11 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
         .update({
           logo_url: url,
           logo_drive_id: driveId,
+          logo_base64: null // Remove base64 se estiver usando Drive
         })
         .eq('id', '00000000-0000-0000-0000-000000000000');
 
       if (error) throw error;
-
       await loadConfig();
     } catch (err: any) {
       throw new Error(`Erro ao atualizar logo: ${err.message}`);
@@ -124,7 +141,7 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
   };
 
   /**
-   * Atualiza favicon do sistema
+   * Atualiza favicon via Google Drive
    */
   const updateFavicon = async (url: string, driveId: string) => {
     try {
@@ -133,24 +150,77 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
         .update({
           favicon_url: url,
           favicon_drive_id: driveId,
+          favicon_base64: null // Remove base64 se estiver usando Drive
         })
         .eq('id', '00000000-0000-0000-0000-000000000000');
 
       if (error) throw error;
-
       await loadConfig();
     } catch (err: any) {
       throw new Error(`Erro ao atualizar favicon: ${err.message}`);
     }
   };
 
+  /**
+   * Atualiza logo via base64
+   */
+  const updateLogoBase64 = async (base64: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('sistema_config')
+        .update({
+          logo_base64: base64,
+          logo_url: null, // Remove URL se estiver usando base64
+          logo_drive_id: null
+        })
+        .eq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (error) throw error;
+      await loadConfig();
+    } catch (err: any) {
+      throw new Error(`Erro ao atualizar logo: ${err.message}`);
+    }
+  };
+
+  /**
+   * Atualiza favicon via base64
+   */
+  const updateFaviconBase64 = async (base64: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('sistema_config')
+        .update({
+          favicon_base64: base64,
+          favicon_url: null, // Remove URL se estiver usando base64
+          favicon_drive_id: null
+        })
+        .eq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (error) throw error;
+      await loadConfig();
+    } catch (err: any) {
+      throw new Error(`Erro ao atualizar favicon: ${err.message}`);
+    }
+  };
+
+  // Determina fonte e valor atual
+  const logo = config?.logo_base64 || config?.logo_url || null;
+  const favicon = config?.favicon_base64 || config?.favicon_url || null;
+  
+  const logoSource = config?.logo_base64 ? 'base64' : config?.logo_url ? 'drive' : null;
+  const faviconSource = config?.favicon_base64 ? 'base64' : config?.favicon_url ? 'drive' : null;
+
   return {
     config,
-    logo: config?.logo_url || null,
-    favicon: config?.favicon_url || null,
+    logo,
+    favicon,
+    logoSource,
+    faviconSource,
     loading,
     error,
     updateLogo,
     updateFavicon,
+    updateLogoBase64,
+    updateFaviconBase64,
   };
 };
