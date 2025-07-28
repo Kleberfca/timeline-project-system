@@ -1,23 +1,21 @@
 // src/lib/supabase.ts
 /**
- * Configuração e inicialização do cliente Supabase
+ * Configuração e cliente do Supabase
+ * Gerencia conexão com banco de dados e autenticação
  */
 
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 
-// Variáveis de ambiente
+// Variáveis de ambiente - devem ser configuradas no .env
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Validação
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY são obrigatórias'
-  );
+  throw new Error('Supabase URL e Anon Key são obrigatórios!');
 }
 
-// Cliente Supabase tipado
+// Cliente Supabase com tipagem TypeScript
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -26,101 +24,64 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-// Helpers de autenticação
-export const auth = {
-  /**
-   * Faz login com email e senha
-   */
-  async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) throw error;
-    return data;
-  },
+// Helpers para operações comuns
 
-  /**
-   * Faz logout
-   */
-  async signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  },
-
-  /**
-   * Obtém sessão atual
-   */
-  async getSession() {
-    const { data } = await supabase.auth.getSession();
-    return data.session;
-  },
-
-  /**
-   * Obtém usuário atual
-   */
-  async getUser() {
-    const { data } = await supabase.auth.getUser();
-    return data.user;
-  },
-
-  /**
-   * Reseta senha
-   */
-  async resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/resetar-senha`
-    });
-    
-    if (error) throw error;
-  },
-
-  /**
-   * Atualiza senha
-   */
-  async updatePassword(newPassword: string) {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-    
-    if (error) throw error;
-  }
+/**
+ * Verifica se o usuário está autenticado
+ */
+export const checkAuth = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
 };
 
-// Helpers de storage
-export const storage = {
-  /**
-   * Faz upload de arquivo
-   */
-  async upload(bucket: string, path: string, file: File) {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file);
-    
-    if (error) throw error;
-    return data;
-  },
+/**
+ * Busca dados do perfil do usuário
+ */
+export const getUserProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
 
-  /**
-   * Obtém URL pública
-   */
-  getPublicUrl(bucket: string, path: string) {
-    const { data } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
-  },
+  if (error) throw error;
+  return data;
+};
 
-  /**
-   * Remove arquivo
-   */
-  async remove(bucket: string, paths: string[]) {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove(paths);
-    
-    if (error) throw error;
+/**
+ * Helpers para Row Level Security (RLS)
+ */
+export const enableRLS = async (tableName: string) => {
+  // Este código seria executado apenas no setup inicial
+  // RLS deve ser configurado diretamente no Supabase Dashboard
+  console.log(`RLS deve ser habilitado para a tabela ${tableName} no Supabase Dashboard`);
+};
+
+// Tipos de erro personalizados
+export class SupabaseError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'SupabaseError';
   }
+}
+
+/**
+ * Wrapper para tratamento de erros do Supabase
+ */
+export const handleSupabaseError = (error: any): never => {
+  if (error.code === 'PGRST116') {
+    throw new SupabaseError('Registro não encontrado', error.code, error);
+  }
+  if (error.code === '23505') {
+    throw new SupabaseError('Registro duplicado', error.code, error);
+  }
+  if (error.code === '42501') {
+    throw new SupabaseError('Permissão negada', error.code, error);
+  }
+  
+  throw new SupabaseError(error.message || 'Erro desconhecido', error.code, error);
 };

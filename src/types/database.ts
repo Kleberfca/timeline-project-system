@@ -1,18 +1,10 @@
 // src/types/database.ts
 /**
- * Tipos gerados para o banco de dados Supabase
- * Pode ser gerado automaticamente com: npx supabase gen types typescript
+ * Tipos do banco de dados gerados pelo Supabase
+ * Atualizado com a fase Tração
  */
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
-
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       users: {
@@ -83,9 +75,7 @@ export interface Database {
           nome: string
           descricao: string | null
           data_inicio: string
-          data_fim: string | null
-          google_drive_folder_id: string | null
-          google_drive_folder_url: string | null
+          data_fim_prevista: string | null
           ativo: boolean
           created_at: string
           updated_at: string
@@ -96,9 +86,7 @@ export interface Database {
           nome: string
           descricao?: string | null
           data_inicio: string
-          data_fim?: string | null
-          google_drive_folder_id?: string | null
-          google_drive_folder_url?: string | null
+          data_fim_prevista?: string | null
           ativo?: boolean
           created_at?: string
           updated_at?: string
@@ -109,9 +97,7 @@ export interface Database {
           nome?: string
           descricao?: string | null
           data_inicio?: string
-          data_fim?: string | null
-          google_drive_folder_id?: string | null
-          google_drive_folder_url?: string | null
+          data_fim_prevista?: string | null
           ativo?: boolean
           created_at?: string
           updated_at?: string
@@ -120,51 +106,48 @@ export interface Database {
       fases: {
         Row: {
           id: string
-          nome: string
+          nome: 'diagnostico' | 'posicionamento' | 'tracao'
           ordem: number
-          created_at: string
         }
         Insert: {
           id?: string
-          nome: string
+          nome: 'diagnostico' | 'posicionamento' | 'tracao'
           ordem: number
-          created_at?: string
         }
         Update: {
           id?: string
-          nome?: string
+          nome?: 'diagnostico' | 'posicionamento' | 'tracao'
           ordem?: number
-          created_at?: string
         }
       }
-      status_etapas: {
+      etapas: {
         Row: {
           id: string
           fase_id: string
           nome: string
+          descricao: string | null
           ordem: number
-          created_at: string
         }
         Insert: {
           id?: string
           fase_id: string
           nome: string
+          descricao?: string | null
           ordem: number
-          created_at?: string
         }
         Update: {
           id?: string
           fase_id?: string
           nome?: string
+          descricao?: string | null
           ordem?: number
-          created_at?: string
         }
       }
       projeto_timeline: {
         Row: {
           id: string
           projeto_id: string
-          status_etapa_id: string
+          etapa_id: string
           status: 'pendente' | 'em_andamento' | 'concluido'
           observacoes: string | null
           data_inicio: string | null
@@ -175,7 +158,7 @@ export interface Database {
         Insert: {
           id?: string
           projeto_id: string
-          status_etapa_id: string
+          etapa_id: string
           status?: 'pendente' | 'em_andamento' | 'concluido'
           observacoes?: string | null
           data_inicio?: string | null
@@ -186,7 +169,7 @@ export interface Database {
         Update: {
           id?: string
           projeto_id?: string
-          status_etapa_id?: string
+          etapa_id?: string
           status?: 'pendente' | 'em_andamento' | 'concluido'
           observacoes?: string | null
           data_inicio?: string | null
@@ -204,9 +187,6 @@ export interface Database {
           tamanho: number | null
           url_google_drive: string
           google_drive_id: string
-          google_drive_folder_id: string | null
-          google_drive_web_view_link: string | null
-          google_drive_web_content_link: string | null
           uploaded_by: string
           created_at: string
         }
@@ -218,9 +198,6 @@ export interface Database {
           tamanho?: number | null
           url_google_drive: string
           google_drive_id: string
-          google_drive_folder_id?: string | null
-          google_drive_web_view_link?: string | null
-          google_drive_web_content_link?: string | null
           uploaded_by: string
           created_at?: string
         }
@@ -232,85 +209,9 @@ export interface Database {
           tamanho?: number | null
           url_google_drive?: string
           google_drive_id?: string
-          google_drive_folder_id?: string | null
-          google_drive_web_view_link?: string | null
-          google_drive_web_content_link?: string | null
           uploaded_by?: string
           created_at?: string
         }
-      }
-      sistema_config: {
-        Row: {
-          id: string
-          logo_url: string | null
-          logo_drive_id: string | null
-          logo_base64: string | null
-          favicon_url: string | null
-          favicon_drive_id: string | null
-          favicon_base64: string | null
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          id?: string
-          logo_url?: string | null
-          logo_drive_id?: string | null
-          logo_base64?: string | null
-          favicon_url?: string | null
-          favicon_drive_id?: string | null
-          favicon_base64?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          id?: string
-          logo_url?: string | null
-          logo_drive_id?: string | null
-          logo_base64?: string | null
-          favicon_url?: string | null
-          favicon_drive_id?: string | null
-          favicon_base64?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-      }
-    }
-    Views: {
-      v_sistema_config: {
-        Row: {
-          id: string
-          logo_url: string | null
-          logo_drive_id: string | null
-          logo_base64: string | null
-          favicon_url: string | null
-          favicon_drive_id: string | null
-          favicon_base64: string | null
-          updated_at: string
-          updated_by: string | null
-          updated_by_nome: string | null
-          updated_by_email: string | null
-          logo_atual: string | null
-          favicon_atual: string | null
-          logo_source: 'base64' | 'drive' | null
-          favicon_source: 'base64' | 'drive' | null
-        }
-      }
-    }
-    Functions: {
-      get_project_folder_id: {
-        Args: {
-          p_projeto_id: string
-          p_default_structure?: Json
-        }
-        Returns: string | null
-      }
-      check_base64_size: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_sistema_config_timestamp: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
     }
   }
