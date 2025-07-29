@@ -1,5 +1,4 @@
 // src/App.tsx
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -9,6 +8,11 @@ import { Layout } from './components/Layout/Layout';
 
 // Páginas públicas
 import { Login } from './pages/Login';
+import { EsqueciSenha } from './pages/EsqueciSenha';
+
+// Páginas autenticadas
+import { Perfil } from './pages/Perfil';
+import { AlterarSenha } from './pages/AlterarSenha';
 
 // Páginas do administrador
 import { AdminDashboard } from './pages/admin/Dashboard';
@@ -17,6 +21,7 @@ import { ClienteForm } from './pages/admin/ClienteForm';
 import { ProjetosList } from './pages/admin/ProjetosList';
 import { ProjetoForm } from './pages/admin/ProjetoForm';
 import { ProjetoDetails } from './pages/admin/ProjetoDetails';
+import { SystemConfig } from './pages/admin/SystemConfig';
 
 // Páginas do cliente
 import { ProjetosCliente } from './pages/cliente/ProjetosCliente';
@@ -30,8 +35,27 @@ function App() {
           <NotificationProvider>
             <Layout>
               <Routes>
-                {/* Rota pública */}
+                {/* Rotas públicas */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+
+                {/* Rotas autenticadas comuns */}
+                <Route
+                  path="/perfil"
+                  element={
+                    <PrivateRoute>
+                      <Perfil />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/alterar-senha"
+                  element={
+                    <PrivateRoute>
+                      <AlterarSenha />
+                    </PrivateRoute>
+                  }
+                />
 
                 {/* Rotas do administrador */}
                 <Route
@@ -95,6 +119,14 @@ function App() {
                   element={
                     <PrivateRoute requireAdmin>
                       <ProjetoForm />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/config"
+                  element={
+                    <PrivateRoute requireAdmin>
+                      <SystemConfig />
                     </PrivateRoute>
                   }
                 />

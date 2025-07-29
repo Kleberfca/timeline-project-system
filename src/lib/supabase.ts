@@ -11,6 +11,14 @@ import type { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// ADICIONE ESTE CONSOLE.LOG PARA DEBUG
+console.log('Supabase Config:', {
+  url: supabaseUrl,
+  key: supabaseAnonKey ? 'Key exists' : 'Key missing'
+});
+
+// ... resto do código ...
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL e Anon Key são obrigatórios!');
 }

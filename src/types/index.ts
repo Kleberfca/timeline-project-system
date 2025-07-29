@@ -13,6 +13,7 @@ export interface User {
   email: string;
   nome: string;
   role: UserRole;
+  telefone?: string;
   cliente_id?: string; // Apenas para usuários do tipo cliente
   created_at: string;
   updated_at: string;
@@ -154,6 +155,7 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  
 }
 
 // Interface para filtros da timeline
@@ -171,22 +173,46 @@ export interface DashboardData {
   etapasEmAndamento: number;
 }
 
+// Interface de configuração do sistema
+export interface SistemaConfig {
+  id: string;
+  logo_url: string | null;
+  logo_drive_id: string | null;
+  favicon_url: string | null;
+  favicon_drive_id: string | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+// Paleta de cores da marca
+export const BRAND_COLORS = {
+  blue: '#011efe',      // Azul principal
+  dark: '#1a1a1a',      // Cinza escuro
+  black: '#000000',     // Preto
+  gray: '#515151',      // Cinza médio
+  light: '#aaaaaa',     // Cinza claro
+  lighter: '#ededed',   // Cinza muito claro
+} as const;
+
 // Cores para os status
 export const STATUS_COLORS = {
   pendente: {
-    bg: 'bg-gray-100',
-    text: 'text-gray-700',
-    border: 'border-gray-300'
+    bg: 'bg-brand-lighter',
+    text: 'text-brand-gray',
+    border: 'border-brand-light',
+    icon: 'text-brand-light'
   },
   em_andamento: {
-    bg: 'bg-yellow-100',
-    text: 'text-yellow-700',
-    border: 'border-yellow-300'
+    bg: 'bg-blue-50',
+    text: 'text-brand-blue',
+    border: 'border-brand-blue',
+    icon: 'text-brand-blue'
   },
   concluido: {
-    bg: 'bg-green-100',
+    bg: 'bg-green-50',
     text: 'text-green-700',
-    border: 'border-green-300'
+    border: 'border-green-300',
+    icon: 'text-green-600'
   }
 } as const;
 
