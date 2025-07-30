@@ -1,19 +1,18 @@
 // src/hooks/useSystemConfig.tsx
 /**
  * Hook para gerenciar configurações do sistema
- * Inclui logo, favicon e outras configurações globais
+ * ATUALIZADO: Remove Google Drive, usa apenas Supabase
  */
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { realtimeSubscriptions } from '../lib/supabase-queries';
 
 interface SystemConfig {
   id: string;
   logo_url: string | null;
-  logo_drive_id: string | null;
+  logo_storage_path: string | null;
   favicon_url: string | null;
-  favicon_drive_id: string | null;
+  favicon_storage_path: string | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -24,8 +23,8 @@ interface UseSystemConfigReturn {
   favicon: string | null;
   loading: boolean;
   error: string | null;
-  updateLogo: (url: string, driveId: string) => Promise<void>;
-  updateFavicon: (url: string, driveId: string) => Promise<void>;
+  updateLogo: (url: string, storagePath: string) => Promise<void>;
+  updateFavicon: (url: string, storagePath: string) => Promise<void>;
 }
 
 export const useSystemConfig = (): UseSystemConfigReturn => {
@@ -72,16 +71,31 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
         .select('*')
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') throw error;
 
-      setConfig(data);
-      
-      // Aplica favicon se existir
-      if (data?.favicon_url) {
-        updateFaviconInDOM(data.favicon_url);
+      // Se não existe config, cria uma padrão
+      if (!data) {
+        const { data: newConfig, error: createError } = await supabase
+          .from('sistema_config')
+          .insert({
+            id: '00000000-0000-0000-0000-000000000000', // UUID fixo para singleton
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        setConfig(newConfig);
+      } else {
+        setConfig(data);
+        
+        // Aplica favicon se existir
+        if (data.favicon_url) {
+          updateFaviconInDOM(data.favicon_url);
+        }
       }
     } catch (err: any) {
       setError(err.message);
+      console.error('Erro ao carregar configurações:', err);
     } finally {
       setLoading(false);
     }
@@ -100,18 +114,28 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
     link.rel = 'icon';
     link.href = faviconUrl;
     document.head.appendChild(link);
+
+    // Também atualiza o elemento com id específico se existir
+    const dynamicFavicon = document.getElementById('dynamic-favicon');
+    if (dynamicFavicon) {
+      (dynamicFavicon as HTMLLinkElement).href = faviconUrl;
+    }
   };
 
   /**
    * Atualiza logo do sistema
    */
-  const updateLogo = async (url: string, driveId: string) => {
+  const updateLogo = async (url: string, storagePath: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase
         .from('sistema_config')
         .update({
           logo_url: url,
-          logo_drive_id: driveId,
+          logo_storage_path: storagePath,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id || null
         })
         .eq('id', '00000000-0000-0000-0000-000000000000');
 
@@ -126,13 +150,17 @@ export const useSystemConfig = (): UseSystemConfigReturn => {
   /**
    * Atualiza favicon do sistema
    */
-  const updateFavicon = async (url: string, driveId: string) => {
+  const updateFavicon = async (url: string, storagePath: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase
         .from('sistema_config')
         .update({
           favicon_url: url,
-          favicon_drive_id: driveId,
+          favicon_storage_path: storagePath,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id || null
         })
         .eq('id', '00000000-0000-0000-0000-000000000000');
 

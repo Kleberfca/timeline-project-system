@@ -1,13 +1,13 @@
 // src/components/SystemConfig/LogoUpload.tsx
 /**
  * Componente para upload e gestão do logo do sistema
- * Corrigido com a assinatura correta do uploadFile
+ * ATUALIZADO: Usa Supabase Storage ao invés do Google Drive
  */
 
 import React, { useState, useRef } from 'react';
 import { useSystemConfig } from '../../hooks/useSystemConfig';
 import { useNotification } from '../../contexts/NotificationContext';
-import { googleDriveService } from '../../services/googleDrive';
+import { uploadSystemImage } from '../../services/storage';
 import { LoadingSpinner } from '../LoadingSpinner';
 
 interface LogoUploadProps {
@@ -62,48 +62,40 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({ currentLogo }) => {
       setUploading(true);
       setUploadProgress(0);
 
-      // Renomeia o arquivo
-      const timestamp = Date.now();
-      const extension = selectedFile.name.split('.').pop() || 'png';
-      const newFile = new File([selectedFile], `logo_${timestamp}.${extension}`, {
-        type: selectedFile.type
-      });
-
-      // Upload para o Google Drive com callback de progresso
-      const result = await googleDriveService.uploadFile(
-        newFile,
-        'sistema/logos', // ID da pasta ou caminho
+      // Upload para Supabase Storage
+      const result = await uploadSystemImage(
+        selectedFile,
+        'logo',
         (progress) => {
-          setUploadProgress(progress.loaded / progress.total * 100);
+          setUploadProgress(Math.round(progress.percentage));
         }
       );
 
       // Atualiza no banco
-      await updateLogo(result.webViewLink, result.id);
+      await updateLogo(result.url, result.path);
 
       showNotification('success', 'Logo atualizado com sucesso!');
       
-      // Limpa estado
-      setPreview(null);
+      // Reset
       setSelectedFile(null);
-      setUploadProgress(0);
+      setPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    } catch (error: any) {
-      showNotification('error', error.message || 'Erro ao atualizar logo');
+    } catch (err: any) {
+      showNotification('error', err.message || 'Erro ao atualizar logo');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
   /**
-   * Cancela seleção
+   * Handle de cancelamento
    */
   const handleCancel = () => {
-    setPreview(null);
     setSelectedFile(null);
-    setUploadProgress(0);
+    setPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -111,22 +103,22 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({ currentLogo }) => {
 
   return (
     <div className="space-y-6">
-      {/* Preview atual */}
+      {/* Logo atual */}
       <div>
-        <h3 className="text-lg font-medium text-brand-dark mb-4">Logo Atual</h3>
-        <div className="bg-brand-lighter rounded-lg p-8 text-center">
+        <h3 className="text-sm font-medium text-brand-dark mb-3">Logo Atual</h3>
+        <div className="bg-brand-lighter rounded-lg p-4 flex items-center justify-center h-32">
           {currentLogo ? (
-            <img
-              src={currentLogo}
-              alt="Logo atual"
-              className="max-h-20 mx-auto object-contain"
+            <img 
+              src={currentLogo} 
+              alt="Logo atual" 
+              className="max-h-full max-w-full object-contain"
             />
           ) : (
-            <div className="text-brand-gray">
-              <svg className="mx-auto h-12 w-12 text-brand-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="mt-2 text-sm">Nenhum logo configurado</p>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-brand-blue rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span className="text-white font-bold text-2xl">T</span>
+              </div>
+              <p className="text-sm text-brand-gray">Nenhum logo configurado</p>
             </div>
           )}
         </div>
@@ -134,95 +126,91 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({ currentLogo }) => {
 
       {/* Upload de novo logo */}
       <div>
-        <h3 className="text-lg font-medium text-brand-dark mb-4">Alterar Logo</h3>
+        <h3 className="text-sm font-medium text-brand-dark mb-3">Novo Logo</h3>
         
-        {!preview ? (
-          <div className="border-2 border-dashed border-brand-light rounded-lg p-6">
-            <div className="text-center">
-              <svg className="mx-auto h-12 w-12 text-brand-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p className="mt-2 text-sm text-brand-gray">
-                Arraste uma imagem ou clique para selecionar
-              </p>
-              <p className="text-xs text-brand-light mt-1">
-                PNG recomendado, máximo 2MB
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="mt-4 px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Selecionar Arquivo
-              </button>
-            </div>
+        {!selectedFile ? (
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-brand-light rounded-lg p-6 text-center cursor-pointer hover:border-brand-gray transition-colors"
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            <svg className="mx-auto h-12 w-12 text-brand-light" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" />
+            </svg>
+            
+            <p className="mt-2 text-sm text-brand-gray">
+              Clique para selecionar uma imagem
+            </p>
+            <p className="text-xs text-brand-light mt-1">
+              PNG recomendado, máximo 2MB
+            </p>
           </div>
         ) : (
-          <div className="border border-brand-light rounded-lg p-6">
-            <div className="space-y-4">
-              {/* Preview */}
-              <div className="bg-brand-lighter rounded-lg p-8 text-center">
-                <img
-                  src={preview}
-                  alt="Preview do novo logo"
-                  className="max-h-20 mx-auto object-contain"
+          <div className="space-y-4">
+            {/* Preview */}
+            <div className="bg-brand-lighter rounded-lg p-4 flex items-center justify-center h-32">
+              {preview && (
+                <img 
+                  src={preview} 
+                  alt="Preview do novo logo" 
+                  className="max-h-full max-w-full object-contain"
                 />
-              </div>
+              )}
+            </div>
 
-              {/* Barra de progresso durante upload */}
-              {uploading && uploadProgress > 0 && (
-                <div className="w-full bg-brand-lighter rounded-full h-2">
+            {/* Informações do arquivo */}
+            <div className="text-sm text-brand-gray">
+              <p>Arquivo: {selectedFile.name}</p>
+              <p>Tamanho: {(selectedFile.size / 1024).toFixed(2)} KB</p>
+            </div>
+
+            {/* Progress bar */}
+            {uploading && uploadProgress > 0 && (
+              <div>
+                <div className="bg-brand-lighter rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-brand-blue h-2 rounded-full transition-all duration-300"
+                    className="bg-brand-blue h-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
-              )}
-
-              {/* Ações */}
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={handleCancel}
-                  disabled={uploading}
-                  className="px-4 py-2 border border-brand-light text-brand-gray rounded-lg hover:bg-brand-lighter transition-colors disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
-                >
-                  {uploading ? (
-                    <>
-                      <LoadingSpinner size="sm" className="mr-2" />
-                      {uploadProgress > 0 ? `Enviando ${Math.round(uploadProgress)}%...` : 'Enviando...'}
-                    </>
-                  ) : (
-                    'Aplicar Logo'
-                  )}
-                </button>
+                <p className="text-xs text-brand-gray mt-1">{uploadProgress}% enviado</p>
               </div>
+            )}
+
+            {/* Botões de ação */}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleUpload}
+                disabled={uploading}
+                className="flex-1 bg-brand-blue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? <LoadingSpinner size="sm" /> : 'Aplicar Logo'}
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={uploading}
+                className="flex-1 border border-brand-light text-brand-gray px-4 py-2 rounded-lg hover:bg-brand-lighter transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Especificações */}
-      <div className="text-sm text-brand-gray">
-        <h4 className="font-medium text-brand-dark mb-2">Especificações recomendadas:</h4>
-        <ul className="list-disc list-inside space-y-1">
-          <li>Formato: PNG com fundo transparente</li>
-          <li>Dimensões: 200x60px (proporção 10:3)</li>
-          <li>Tamanho máximo: 2MB</li>
-          <li>Resolução: 72 DPI ou superior</li>
-        </ul>
+      {/* Instruções */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>Dica:</strong> Use um logo com fundo transparente em formato PNG para melhor resultado. 
+          O logo será exibido no header do sistema em todos os dispositivos.
+        </p>
       </div>
     </div>
   );

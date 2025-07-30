@@ -4,11 +4,13 @@
  */
 
 import { supabase, handleSupabaseError } from './supabase';
+import { storageService } from '../services/storage';
 import type { 
   Cliente, 
   Projeto, 
   ProjetoTimeline, 
   Arquivo,
+  CreateArquivoData,
   StatusEtapa,
   SistemaConfig
 } from '../types';
@@ -207,7 +209,7 @@ export const timelineQueries = {
   }
 };
 
-// Queries para Arquivos
+// Queries para Arquivos - ATUALIZADO SEM GOOGLE DRIVE
 export const arquivoQueries = {
   /**
    * Lista arquivos por timeline
@@ -220,13 +222,70 @@ export const arquivoQueries = {
       .order('created_at', { ascending: false });
     
     if (error) handleSupabaseError(error);
-    return data as Arquivo[];
+    
+    // Para cada arquivo com storage_path, gera URL assinada se necessário
+    const arquivosComUrls = await Promise.all(
+      (data || []).map(async (arquivo) => {
+        // Se é um link externo, mantém a URL original
+        if (arquivo.tipo === 'link' || arquivo.bucket_name === 'links') {
+          return arquivo;
+        }
+        
+        // Se tem storage_path mas não tem URL válida, gera nova URL assinada
+        if (arquivo.storage_path && arquivo.bucket_name) {
+          try {
+            const url = await storageService.getSignedUrl(
+              arquivo.bucket_name,
+              arquivo.storage_path,
+              3600 // 1 hora
+            );
+            return { ...arquivo, storage_url: url };
+          } catch (err) {
+            console.error('Erro ao gerar URL assinada:', err);
+            return arquivo;
+          }
+        }
+        
+        return arquivo;
+      })
+    );
+    
+    return arquivosComUrls as Arquivo[];
   },
 
   /**
-   * Registra novo arquivo
+   * Busca arquivo por ID
    */
-  async criar(arquivo: Omit<Arquivo, 'id' | 'created_at'>) {
+  async buscarPorId(id: string) {
+    const { data, error } = await supabase
+      .from('arquivos')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    
+    // Gera URL assinada se necessário
+    if (data && data.storage_path && data.bucket_name && data.tipo !== 'link') {
+      try {
+        const url = await storageService.getSignedUrl(
+          data.bucket_name,
+          data.storage_path,
+          3600
+        );
+        data.storage_url = url;
+      } catch (err) {
+        console.error('Erro ao gerar URL assinada:', err);
+      }
+    }
+    
+    return data as Arquivo;
+  },
+
+  /**
+   * Cria novo arquivo
+   */
+  async criar(arquivo: CreateArquivoData) {
     const { data, error } = await supabase
       .from('arquivos')
       .insert(arquivo)
@@ -241,12 +300,40 @@ export const arquivoQueries = {
    * Remove arquivo
    */
   async remover(id: string) {
+    // Busca o arquivo primeiro para deletar do storage
+    const arquivo = await this.buscarPorId(id);
+    
+    // Se tem arquivo no storage, deleta
+    if (arquivo && arquivo.storage_path && arquivo.bucket_name && arquivo.tipo !== 'link') {
+      try {
+        await storageService.deleteFile(arquivo.bucket_name, arquivo.storage_path);
+      } catch (err) {
+        console.error('Erro ao deletar arquivo do storage:', err);
+      }
+    }
+    
+    // Deleta do banco
     const { error } = await supabase
       .from('arquivos')
       .delete()
       .eq('id', id);
     
     if (error) handleSupabaseError(error);
+  },
+
+  /**
+   * Atualiza arquivo
+   */
+  async atualizar(id: string, updates: Partial<Arquivo>) {
+    const { data, error } = await supabase
+      .from('arquivos')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    return data as Arquivo;
   }
 };
 

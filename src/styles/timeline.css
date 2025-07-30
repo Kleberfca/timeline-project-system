@@ -1,0 +1,170 @@
+/* src/styles/timeline.css */
+/**
+ * Estilos adicionais para Timeline responsiva
+ * Garante que cards nunca vazem conteúdo
+ */
+
+/* Animações suaves */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Timeline Cards - Animação de entrada */
+.timeline-card-enter {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Scroll horizontal suave para tabs no mobile */
+.timeline-tabs-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Indicadores de scroll para tabs */
+.timeline-tabs-container::before,
+.timeline-tabs-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.timeline-tabs-container::before {
+  left: 0;
+  background: linear-gradient(to right, white, transparent);
+}
+
+.timeline-tabs-container::after {
+  right: 0;
+  background: linear-gradient(to left, white, transparent);
+}
+
+/* Cards responsivos - Garantir que conteúdo não vaze */
+.timeline-card {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Textarea responsiva */
+.timeline-textarea {
+  min-height: 60px;
+  max-height: 200px;
+  resize: vertical;
+}
+
+/* Progress bar animada */
+.timeline-progress-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Mobile: Ajustes específicos */
+@media (max-width: 640px) {
+  /* Cards ocupam largura total */
+  .timeline-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Padding reduzido no mobile */
+  .timeline-card-content {
+    padding: 0.75rem;
+  }
+  
+  /* Botões menores no mobile */
+  .timeline-status-button {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+}
+
+/* Tablet: Ajustes */
+@media (min-width: 641px) and (max-width: 1023px) {
+  /* 2 colunas no tablet */
+  .timeline-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop grande: Mais colunas para fase Tração */
+@media (min-width: 1536px) {
+  /* Até 5 colunas para acomodar 10 etapas da Tração */
+  .timeline-grid-large {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Impressão */
+@media print {
+  /* Timeline em layout vertical para impressão */
+  .timeline-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Remover sombras e bordas desnecessárias */
+  .timeline-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+  
+  /* Expandir todos os cards */
+  .timeline-card-collapsed {
+    display: block !important;
+  }
+}
+
+/* Acessibilidade - Focus visible */
+.timeline-interactive:focus-visible {
+  outline: 2px solid #011efe;
+  outline-offset: 2px;
+}
+
+/* Modo escuro (preparado para futuro) */
+@media (prefers-color-scheme: dark) {
+  /* Estrutura pronta para implementar dark mode */
+}
+
+/* Performance - Reduzir animações se preferência do usuário */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

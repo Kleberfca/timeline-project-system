@@ -128,8 +128,9 @@ export interface Arquivo {
   nome: string;
   tipo: TipoArquivo;
   tamanho?: number;
-  url_google_drive: string;
-  google_drive_id: string;
+  storage_path?: string;
+  storage_url?: string;
+  bucket_name?: string;
   uploaded_by: string;
   created_at: string;
   projeto_timeline?: ProjetoTimeline;
@@ -177,9 +178,9 @@ export interface DashboardData {
 export interface SistemaConfig {
   id: string;
   logo_url: string | null;
-  logo_drive_id: string | null;
+  logo_storage_path: string | null;
   favicon_url: string | null;
-  favicon_drive_id: string | null;
+  favicon_storage_path: string | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -221,6 +222,7 @@ export interface FileUploadData {
   file: File;
   projetoTimelineId: string;
   tipo: TipoArquivo;
+  bucket?: string;
 }
 
 // Interface para progresso de upload
@@ -228,6 +230,18 @@ export interface UploadProgress {
   loaded: number;
   total: number;
   percentage: number;
+}
+
+// Interface de dados para criar arquivo - NOVA
+export interface CreateArquivoData {
+  projeto_timeline_id: string;
+  nome: string;
+  tipo: TipoArquivo;
+  tamanho?: number;
+  storage_path?: string;
+  storage_url?: string;
+  bucket_name?: string;
+  uploaded_by: string;
 }
 
 // Tipo para notificações

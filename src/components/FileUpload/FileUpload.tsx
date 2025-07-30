@@ -1,13 +1,15 @@
 // src/components/FileUpload/FileUpload.tsx
 /**
  * Componente de upload de arquivos
- * Integração com Google Drive
+ * Atualizado para usar Supabase Storage
+ * Remove completamente dependência do Google Drive
  */
 
 import React, { useState, useRef } from 'react';
 import { arquivoQueries } from '../../lib/supabase-queries';
-import { uploadToGoogleDrive } from '../../services/googleDrive';
+import { uploadProjectFile } from '../../services/storage';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import type { TipoArquivo, UploadProgress } from '../../types';
 
 interface FileUploadProps {
@@ -31,9 +33,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+  const { showNotification } = useNotification();
 
   /**
    * Valida tipo de arquivo
@@ -50,23 +52,22 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     const fileType = validateFileType(file);
     
     if (!fileType) {
-      setError('Tipo de arquivo não permitido. Use PDF, Word, Excel ou CSV.');
+      showNotification('error', 'Tipo de arquivo não permitido. Use PDF, Word, Excel ou CSV.');
       return;
     }
 
     // Limite de tamanho: 10MB
     if (file.size > 10 * 1024 * 1024) {
-      setError('Arquivo muito grande. Tamanho máximo: 10MB');
+      showNotification('error', 'Arquivo muito grande. Tamanho máximo: 10MB');
       return;
     }
 
     try {
       setUploading(true);
-      setError(null);
       setUploadProgress({ loaded: 0, total: file.size, percentage: 0 });
 
-      // Upload para Google Drive
-      const googleDriveData = await uploadToGoogleDrive(
+      // Upload para Supabase Storage
+      const uploadResult = await uploadProjectFile(
         file,
         projetoTimelineId,
         (progress) => setUploadProgress(progress)
@@ -78,12 +79,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         nome: file.name,
         tipo: fileType,
         tamanho: file.size,
-        url_google_drive: googleDriveData.webViewLink,
-        google_drive_id: googleDriveData.id,
+        storage_path: uploadResult.path,
+        storage_url: uploadResult.url,
+        bucket_name: 'arquivos',
         uploaded_by: user!.id
       });
 
-      // Callback de sucesso
+      showNotification('success', 'Arquivo enviado com sucesso!');
       onUploadComplete?.();
       
       // Reset do input
@@ -92,7 +94,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       }
     } catch (err: any) {
       console.error('Erro no upload:', err);
-      setError(err.message || 'Erro ao fazer upload do arquivo');
+      showNotification('error', err.message || 'Erro ao fazer upload do arquivo');
     } finally {
       setUploading(false);
       setUploadProgress(null);
@@ -139,23 +141,31 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     const url = prompt('Digite o URL do repositório ou documento:');
     if (!url) return;
 
+    // Validação básica de URL
+    try {
+      new URL(url);
+    } catch {
+      showNotification('error', 'URL inválida');
+      return;
+    }
+
     try {
       setUploading(true);
-      setError(null);
 
       // Cria um "arquivo" virtual para links
       await arquivoQueries.criar({
         projeto_timeline_id: projetoTimelineId,
         nome: url,
         tipo: 'link' as TipoArquivo,
-        url_google_drive: url,
-        google_drive_id: 'link-' + Date.now(),
+        storage_url: url,
+        bucket_name: 'links',
         uploaded_by: user!.id
       });
 
+      showNotification('success', 'Link adicionado com sucesso!');
       onUploadComplete?.();
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar link');
+      showNotification('error', err.message || 'Erro ao salvar link');
     } finally {
       setUploading(false);
     }
@@ -170,99 +180,84 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         onDrop={handleDrop}
         className={`
           relative border-2 border-dashed rounded-lg p-6 text-center
+          transition-all duration-200
           ${isDragging 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-brand-blue bg-blue-50' 
+            : 'border-brand-light hover:border-brand-gray'
           }
           ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
+        onClick={() => !uploading && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
           type="file"
-          onChange={handleFileSelect}
+          className="hidden"
           accept=".pdf,.doc,.docx,.xlsx,.xls,.csv"
+          onChange={handleFileSelect}
           disabled={uploading}
-          className="sr-only"
         />
 
+        {/* Ícone de upload */}
         <svg
-          className="mx-auto h-12 w-12 text-gray-400"
-          stroke="currentColor"
+          className={`mx-auto h-12 w-12 ${isDragging ? 'text-brand-blue' : 'text-brand-light'}`}
           fill="none"
+          stroke="currentColor"
           viewBox="0 0 48 48"
         >
           <path
-            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-            strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
+            strokeWidth={2}
+            d="M24 14v14m0 0l-5-5m5 5l5-5m-5 14c-7.732 0-14-6.268-14-14s6.268-14 14-14 14 6.268 14 14-6.268 14-14 14z"
           />
         </svg>
 
-        <p className="mt-2 text-sm text-gray-600">
-          {uploading ? (
-            'Fazendo upload...'
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Clique para enviar
-              </button>
-              {' ou arraste um arquivo aqui'}
-            </>
-          )}
+        <p className="mt-2 text-sm text-brand-gray">
+          {isDragging 
+            ? 'Solte o arquivo aqui' 
+            : 'Clique ou arraste arquivos para fazer upload'
+          }
         </p>
-        <p className="mt-1 text-xs text-gray-500">
-          PDF, Word, Excel ou CSV até 10MB
+        <p className="text-xs text-brand-light mt-1">
+          PDF, Word, Excel ou CSV (máx. 10MB)
         </p>
+
+        {/* Barra de progresso */}
+        {uploadProgress && (
+          <div className="mt-4">
+            <div className="bg-brand-lighter rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-brand-blue h-full transition-all duration-300"
+                style={{ width: `${uploadProgress.percentage}%` }}
+              />
+            </div>
+            <p className="text-xs text-brand-gray mt-1">
+              {uploadProgress.percentage}% enviado
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Botão de adicionar link */}
+      {/* Botão para adicionar link */}
       <button
         type="button"
         onClick={handleLinkUpload}
         disabled={uploading}
-        className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-2 px-4 border border-brand-light rounded-lg text-sm text-brand-gray hover:bg-brand-lighter transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg className="inline-block w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-        </svg>
-        Adicionar Link de Repositório
+        <div className="flex items-center justify-center space-x-2">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <span>Adicionar link de repositório</span>
+        </div>
       </button>
 
-      {/* Barra de progresso */}
-      {uploadProgress && (
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Enviando arquivo...</span>
-            <span>{uploadProgress.percentage}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${uploadProgress.percentage}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Mensagem de erro */}
-      {error && (
-        <div className="rounded-md bg-red-50 p-3">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          </div>
+      {/* Loading spinner */}
+      {uploading && (
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
         </div>
       )}
     </div>

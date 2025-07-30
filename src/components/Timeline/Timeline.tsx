@@ -1,15 +1,17 @@
 // src/components/Timeline/Timeline.tsx
 /**
  * Componente principal de Timeline
- * Visualização interativa das etapas do projeto
- * Atualizado para incluir a fase Tração
+ * TOTALMENTE RESPONSIVO para todos os dispositivos
+ * Suporta as 3 fases: Diagnóstico, Posicionamento e Tração
  */
 
 import React, { useState, useEffect } from 'react';
 import { timelineQueries, realtimeSubscriptions } from '../../lib/supabase-queries';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useNotification } from '../../contexts/NotificationContext';
 import { TimelineCard } from './TimelineCard';
-import { STATUS_COLORS, ETAPAS_DIAGNOSTICO, ETAPAS_POSICIONAMENTO, ETAPAS_TRACAO } from '../../types';
+import { LoadingSpinner } from '../LoadingSpinner';
+import { ETAPAS_DIAGNOSTICO, ETAPAS_POSICIONAMENTO, ETAPAS_TRACAO } from '../../types';
 import type { ProjetoTimeline, FaseNome } from '../../types';
 
 interface TimelineProps {
@@ -22,6 +24,7 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { canUpdateTimeline } = usePermissions();
+  const { showNotification } = useNotification();
 
   /**
    * Carrega dados da timeline
@@ -43,10 +46,12 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
   const loadTimelineData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await timelineQueries.buscarPorProjetoFase(projetoId, activeTab);
       setTimelineData(data || []);
     } catch (err: any) {
       setError(err.message);
+      showNotification('error', 'Erro ao carregar timeline');
     } finally {
       setLoading(false);
     }
@@ -75,121 +80,140 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
   };
 
   /**
-   * Retorna o número de etapas por fase
+   * Retorna informações da fase
    */
-  const getEtapasByFase = (fase: FaseNome): number => {
-    switch (fase) {
-      case 'diagnostico':
-        return ETAPAS_DIAGNOSTICO.length;
-      case 'posicionamento':
-        return ETAPAS_POSICIONAMENTO.length;
-      case 'tracao':
-        return ETAPAS_TRACAO.length;
-      default:
-        return 0;
-    }
+  const getFaseInfo = (fase: FaseNome) => {
+    const info = {
+      diagnostico: {
+        nome: 'Diagnóstico',
+        etapas: ETAPAS_DIAGNOSTICO.length,
+        descricao: 'Análise completa da situação atual',
+        icon: '🔍'
+      },
+      posicionamento: {
+        nome: 'Posicionamento',
+        etapas: ETAPAS_POSICIONAMENTO.length,
+        descricao: 'Estratégia e planejamento',
+        icon: '🎯'
+      },
+      tracao: {
+        nome: 'Tração',
+        etapas: ETAPAS_TRACAO.length,
+        descricao: 'Execução e resultados',
+        icon: '🚀'
+      }
+    };
+    return info[fase];
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        Erro ao carregar timeline: {error}
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <p className="font-medium">Erro ao carregar timeline</p>
+        <p className="text-sm mt-1">{error}</p>
       </div>
     );
   }
 
   const progress = calculateProgress();
+  const faseInfo = getFaseInfo(activeTab);
 
   return (
-    <div className="space-y-6">
-      {/* Tabs de navegação */}
-      <div className="border-b border-brand-lighter">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab('diagnostico')}
-            className={`
-              py-2 px-1 border-b-2 font-medium text-sm transition-colors
-              ${activeTab === 'diagnostico'
-                ? 'border-brand-blue text-brand-blue'
-                : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
-              }
-            `}
-          >
-            Fase 1: Diagnóstico
-            <span className="ml-2 text-xs text-brand-gray">
-              ({getEtapasByFase('diagnostico')} etapas)
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('posicionamento')}
-            className={`
-              py-2 px-1 border-b-2 font-medium text-sm transition-colors
-              ${activeTab === 'posicionamento'
-                ? 'border-brand-blue text-brand-blue'
-                : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
-              }
-            `}
-          >
-            Fase 2: Posicionamento
-            <span className="ml-2 text-xs text-brand-gray">
-              ({getEtapasByFase('posicionamento')} etapas)
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('tracao')}
-            className={`
-              py-2 px-1 border-b-2 font-medium text-sm transition-colors
-              ${activeTab === 'tracao'
-                ? 'border-brand-blue text-brand-blue'
-                : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
-              }
-            `}
-          >
-            Fase 3: Tração
-            <span className="ml-2 text-xs text-brand-gray">
-              ({getEtapasByFase('tracao')} etapas)
-            </span>
-          </button>
-        </nav>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header Responsivo */}
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-brand-dark mb-4">
+          Timeline do Projeto
+        </h2>
+
+        {/* Tabs Responsivas - Scroll horizontal no mobile */}
+        <div className="border-b border-brand-lighter -mx-4 sm:-mx-6 px-4 sm:px-6">
+          <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto scrollbar-hide -mb-px" aria-label="Fases">
+            {(['diagnostico', 'posicionamento', 'tracao'] as FaseNome[]).map((fase) => {
+              const info = getFaseInfo(fase);
+              return (
+                <button
+                  key={fase}
+                  onClick={() => setActiveTab(fase)}
+                  className={`
+                    whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors
+                    flex items-center space-x-2 min-w-fit
+                    ${activeTab === fase
+                      ? 'border-brand-blue text-brand-blue'
+                      : 'border-transparent text-brand-gray hover:text-brand-dark hover:border-brand-light'
+                    }
+                  `}
+                >
+                  <span className="text-lg hidden sm:inline">{info.icon}</span>
+                  <span>Fase {fase === 'diagnostico' ? '1' : fase === 'posicionamento' ? '2' : '3'}</span>
+                  <span className="hidden sm:inline">- {info.nome}</span>
+                  <span className="text-xs text-brand-gray">({info.etapas})</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Info da Fase - Responsiva */}
+        <div className="mt-4 p-3 sm:p-4 bg-brand-lighter/50 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <span className="text-2xl hidden sm:block">{faseInfo.icon}</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-brand-dark text-sm sm:text-base">
+                Fase {activeTab === 'diagnostico' ? '1' : activeTab === 'posicionamento' ? '2' : '3'}: {faseInfo.nome}
+              </h3>
+              <p className="text-xs sm:text-sm text-brand-gray mt-1">
+                {faseInfo.descricao} • {faseInfo.etapas} etapas
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Barra de progresso */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex justify-between items-center mb-2">
+      {/* Barra de Progresso - Responsiva */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <h3 className="text-sm font-medium text-brand-dark">
-            Progresso da Fase {activeTab === 'diagnostico' ? 'Diagnóstico' : activeTab === 'posicionamento' ? 'Posicionamento' : 'Tração'}
+            Progresso da Fase
           </h3>
-          <span className="text-sm font-semibold text-brand-dark">{progress}%</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-2xl font-bold text-brand-blue">{progress}%</span>
+            <span className="text-xs text-brand-gray">
+              ({timelineData.filter(item => item.status === 'concluido').length} de {timelineData.length} concluídas)
+            </span>
+          </div>
         </div>
-        <div className="w-full bg-brand-lighter rounded-full h-2">
+        <div className="w-full bg-brand-lighter rounded-full h-2 sm:h-3 overflow-hidden">
           <div
-            className="bg-brand-blue h-2 rounded-full transition-all duration-500"
+            className="bg-gradient-to-r from-brand-blue to-blue-600 h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      {/* Timeline visual */}
-      <div className="relative">
-        {/* Linha horizontal de conexão */}
-        <div className="absolute top-20 left-0 right-0 h-0.5 bg-brand-light" />
-        
-        {/* Cards das etapas - Responsivo */}
+      {/* Timeline Visual - Grid Super Responsivo */}
+      <div className="space-y-4">
+        {/* Desktop: Linha horizontal de conexão */}
+        <div className="hidden lg:block relative h-24 mb-8">
+          <div className="absolute top-12 left-0 right-0 h-0.5 bg-brand-light" />
+        </div>
+
+        {/* Cards Grid - Totalmente Responsivo */}
         <div className={`
-          grid gap-6
+          grid gap-4 
           grid-cols-1
           sm:grid-cols-2
           lg:grid-cols-3
           xl:grid-cols-4
-          ${timelineData.length > 6 ? '2xl:grid-cols-5' : ''}
+          ${timelineData.length > 8 ? '2xl:grid-cols-5' : ''}
         `}>
           {timelineData.map((item, index) => (
             <TimelineCard
@@ -198,54 +222,52 @@ export const Timeline: React.FC<TimelineProps> = ({ projetoId }) => {
               index={index}
               isEditable={canUpdateTimeline}
               onUpdate={loadTimelineData}
+              totalItems={timelineData.length}
             />
           ))}
         </div>
+
+        {/* Mensagem se não houver etapas */}
+        {timelineData.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-brand-gray">Nenhuma etapa encontrada para esta fase.</p>
+          </div>
+        )}
       </div>
 
-      {/* Informação adicional para fase Tração */}
-      {activeTab === 'tracao' && (
-        <div className="bg-blue-50 border border-brand-blue/20 rounded-lg p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-brand-blue" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-brand-dark">
-                Fase de Tração
-              </h3>
-              <div className="mt-2 text-sm text-brand-gray">
-                <p>Esta fase foca em ações práticas para gerar resultados, incluindo:</p>
-                <ul className="list-disc list-inside mt-1">
-                  <li>Estratégias de tráfego e funil de vendas</li>
-                  <li>Gestão de anúncios com foco em performance</li>
-                  <li>Estruturação completa do processo comercial</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Legenda - Responsiva */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <h4 className="text-sm font-medium text-brand-dark mb-3">Legenda</h4>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center">
-            <div className={`w-4 h-4 rounded ${STATUS_COLORS.pendente.bg} ${STATUS_COLORS.pendente.border} border mr-2`} />
-            <span className="text-sm text-brand-gray">Pendente</span>
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <h4 className="text-sm font-medium text-brand-dark mb-3">Legenda de Status</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-4 h-4 rounded-full bg-brand-lighter border-2 border-brand-light" />
+            <div>
+              <span className="text-sm font-medium text-brand-dark">Pendente</span>
+              <p className="text-xs text-brand-gray">Ainda não iniciada</p>
+            </div>
           </div>
-          <div className="flex items-center">
-            <div className={`w-4 h-4 rounded ${STATUS_COLORS.em_andamento.bg} ${STATUS_COLORS.em_andamento.border} border mr-2`} />
-            <span className="text-sm text-brand-gray">Em Andamento</span>
+          <div className="flex items-center space-x-3">
+            <div className="w-4 h-4 rounded-full bg-blue-100 border-2 border-brand-blue" />
+            <div>
+              <span className="text-sm font-medium text-brand-dark">Em Andamento</span>
+              <p className="text-xs text-brand-gray">Sendo executada</p>
+            </div>
           </div>
-          <div className="flex items-center">
-            <div className={`w-4 h-4 rounded ${STATUS_COLORS.concluido.bg} ${STATUS_COLORS.concluido.border} border mr-2`} />
-            <span className="text-sm text-brand-gray">Concluído</span>
+          <div className="flex items-center space-x-3">
+            <div className="w-4 h-4 rounded-full bg-green-100 border-2 border-green-500" />
+            <div>
+              <span className="text-sm font-medium text-brand-dark">Concluída</span>
+              <p className="text-xs text-brand-gray">Finalizada com sucesso</p>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Dica Mobile */}
+      <div className="sm:hidden bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p className="text-xs text-blue-800">
+          💡 <strong>Dica:</strong> Toque nos cards para ver mais detalhes e opções.
+        </p>
       </div>
     </div>
   );

@@ -1,14 +1,15 @@
 // src/components/Timeline/TimelineCard.tsx
 /**
  * Card individual de etapa na timeline
- * Expansível com detalhes e upload de arquivos
+ * TOTALMENTE RESPONSIVO - conteúdo nunca vaza
+ * Funciona perfeitamente em todos os dispositivos
  */
 
 import React, { useState } from 'react';
 import { timelineQueries } from '../../lib/supabase-queries';
+import { useNotification } from '../../contexts/NotificationContext';
 import { FileUpload } from '../FileUpload/FileUpload';
 import { FileList } from '../FileUpload/FileList';
-import { STATUS_COLORS } from '../../types';
 import type { ProjetoTimeline, StatusEtapa } from '../../types';
 
 interface TimelineCardProps {
@@ -16,19 +17,55 @@ interface TimelineCardProps {
   index: number;
   isEditable: boolean;
   onUpdate: () => void;
+  totalItems: number;
 }
 
 export const TimelineCard: React.FC<TimelineCardProps> = ({
   data,
   index,
   isEditable,
-  onUpdate
+  onUpdate,
+  totalItems
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [observacoes, setObservacoes] = useState(data.observacoes || '');
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const { showNotification } = useNotification();
 
-  const statusColor = STATUS_COLORS[data.status];
+  /**
+   * Cores e estilos baseados no status
+   */
+  const getStatusStyles = (status: StatusEtapa) => {
+    switch (status) {
+      case 'pendente':
+        return {
+          bg: 'bg-brand-lighter',
+          border: 'border-brand-light',
+          text: 'text-brand-gray',
+          icon: '○',
+          label: 'Pendente'
+        };
+      case 'em_andamento':
+        return {
+          bg: 'bg-blue-50',
+          border: 'border-brand-blue',
+          text: 'text-brand-blue',
+          icon: '◐',
+          label: 'Em Andamento'
+        };
+      case 'concluido':
+        return {
+          bg: 'bg-green-50',
+          border: 'border-green-500',
+          text: 'text-green-700',
+          icon: '●',
+          label: 'Concluída'
+        };
+    }
+  };
+
+  const statusStyle = getStatusStyles(data.status);
 
   /**
    * Atualiza status da etapa
@@ -39,10 +76,11 @@ export const TimelineCard: React.FC<TimelineCardProps> = ({
     try {
       setIsUpdating(true);
       await timelineQueries.atualizarStatus(data.id, newStatus, observacoes);
+      showNotification('success', 'Status atualizado com sucesso!');
       onUpdate();
     } catch (error: any) {
       console.error('Erro ao atualizar status:', error);
-      alert('Erro ao atualizar status: ' + error.message);
+      showNotification('error', 'Erro ao atualizar status');
     } finally {
       setIsUpdating(false);
     }
@@ -52,51 +90,98 @@ export const TimelineCard: React.FC<TimelineCardProps> = ({
    * Salva observações
    */
   const handleSaveObservacoes = async () => {
-    if (!isEditable || isUpdating) return;
+    if (!isEditable || isUpdating || observacoes === data.observacoes) return;
 
     try {
       setIsUpdating(true);
       await timelineQueries.atualizarStatus(data.id, data.status, observacoes);
+      showNotification('success', 'Observações salvas!');
       onUpdate();
     } catch (error: any) {
       console.error('Erro ao salvar observações:', error);
-      alert('Erro ao salvar observações: ' + error.message);
+      showNotification('error', 'Erro ao salvar observações');
     } finally {
       setIsUpdating(false);
     }
   };
 
+  /**
+   * Formata data para exibição
+   */
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
   return (
-    <div className="relative">
-      {/* Indicador de posição na timeline */}
-      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-2 border-gray-300 rounded-full z-10" />
-      
-      {/* Card da etapa */}
-      <div className={`
-        bg-white rounded-lg shadow-lg p-4 mt-8 border-2 transition-all
-        ${statusColor.border} ${isExpanded ? 'ring-2 ring-blue-400' : ''}
-      `}>
-        {/* Header do card */}
-        <div
-          className="cursor-pointer"
+    <div className="relative group">
+      {/* Indicador de posição desktop */}
+      <div className="hidden lg:block absolute -top-8 left-1/2 transform -translate-x-1/2">
+        <div className="relative">
+          <div className="w-4 h-4 bg-white border-2 border-brand-gray rounded-full" />
+          <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-0.5 h-4 bg-brand-light" />
+        </div>
+      </div>
+
+      {/* Card Principal - Totalmente Responsivo */}
+      <div
+        className={`
+          relative bg-white rounded-lg shadow-md hover:shadow-lg
+          transition-all duration-200 border-2
+          ${statusStyle.border}
+          ${isExpanded ? 'ring-2 ring-brand-blue ring-opacity-50' : ''}
+          overflow-hidden
+        `}
+      >
+        {/* Header do Card - Clicável */}
+        <button
           onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full text-left p-4 focus:outline-none focus:bg-brand-lighter/20"
+          aria-expanded={isExpanded}
+          aria-label={`Expandir detalhes da etapa ${data.etapa?.nome}`}
         >
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-sm font-semibold text-gray-900 pr-2">
-              {data.etapa?.nome}
-            </h3>
+          {/* Número da etapa e status */}
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-medium text-brand-gray bg-brand-lighter px-2 py-1 rounded">
+                Etapa {index + 1}
+              </span>
+              <span className={`text-lg ${statusStyle.text}`}>
+                {statusStyle.icon}
+              </span>
+            </div>
             <div className={`
-              inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-              ${statusColor.bg} ${statusColor.text}
+              px-2 py-1 rounded-full text-xs font-medium
+              ${statusStyle.bg} ${statusStyle.text}
+              flex items-center space-x-1
             `}>
-              {data.status.replace('_', ' ').charAt(0).toUpperCase() + data.status.slice(1).replace('_', ' ')}
+              <span className="hidden sm:inline">{statusStyle.label}</span>
+              <span className="sm:hidden">{statusStyle.icon}</span>
             </div>
           </div>
-          
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Etapa {index + 1}</span>
+
+          {/* Nome da etapa - Com quebra de linha responsiva */}
+          <h3 className="text-sm sm:text-base font-semibold text-brand-dark mb-2 line-clamp-2">
+            {data.etapa?.nome || 'Etapa sem nome'}
+          </h3>
+
+          {/* Info resumida */}
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-brand-gray">
+              {data.data_inicio ? (
+                <span>Iniciada em {formatDate(data.data_inicio)}</span>
+              ) : (
+                <span>Não iniciada</span>
+              )}
+            </div>
+            
+            {/* Ícone de expansão */}
             <svg
-              className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-brand-gray transition-transform ${isExpanded ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -104,127 +189,168 @@ export const TimelineCard: React.FC<TimelineCardProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-        </div>
+        </button>
 
-        {/* Conteúdo expandido */}
+        {/* Conteúdo Expandido - Responsivo */}
         {isExpanded && (
-          <div className="mt-4 space-y-4 border-t pt-4">
-            {/* Botões de status */}
-            {isEditable && (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Alterar Status
-                </label>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleStatusUpdate('pendente')}
-                    disabled={isUpdating || data.status === 'pendente'}
-                    className={`
-                      px-3 py-1 text-xs font-medium rounded-md transition-colors
-                      ${data.status === 'pendente'
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }
-                    `}
-                  >
-                    Pendente
-                  </button>
-                  <button
-                    onClick={() => handleStatusUpdate('em_andamento')}
-                    disabled={isUpdating || data.status === 'em_andamento'}
-                    className={`
-                      px-3 py-1 text-xs font-medium rounded-md transition-colors
-                      ${data.status === 'em_andamento'
-                        ? 'bg-yellow-200 text-yellow-700 cursor-not-allowed'
-                        : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                      }
-                    `}
-                  >
-                    Em Andamento
-                  </button>
-                  <button
-                    onClick={() => handleStatusUpdate('concluido')}
-                    disabled={isUpdating || data.status === 'concluido'}
-                    className={`
-                      px-3 py-1 text-xs font-medium rounded-md transition-colors
-                      ${data.status === 'concluido'
-                        ? 'bg-green-200 text-green-700 cursor-not-allowed'
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }
-                    `}
-                  >
-                    Concluído
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Datas */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {data.data_inicio && (
-                <div>
-                  <span className="text-gray-500">Iniciado em:</span>
-                  <p className="font-medium">
-                    {new Date(data.data_inicio).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              )}
-              {data.data_conclusao && (
-                <div>
-                  <span className="text-gray-500">Concluído em:</span>
-                  <p className="font-medium">
-                    {new Date(data.data_conclusao).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Observações */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Observações
-              </label>
-              {isEditable ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Adicione observações sobre esta etapa..."
-                  />
-                  <button
-                    onClick={handleSaveObservacoes}
-                    disabled={isUpdating || observacoes === data.observacoes}
-                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Salvar Observações
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-700">
-                  {data.observacoes || 'Sem observações'}
-                </p>
-              )}
-            </div>
-
-            {/* Upload e lista de arquivos */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Arquivos</h4>
+          <div className="border-t border-brand-lighter">
+            <div className="p-4 space-y-4">
+              {/* Botões de Status - Responsivos */}
               {isEditable && (
-                <FileUpload
-                  projetoTimelineId={data.id}
-                  onUploadComplete={onUpdate}
-                />
+                <div>
+                  <label className="block text-sm font-medium text-brand-dark mb-2">
+                    Alterar Status
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => handleStatusUpdate('pendente')}
+                      disabled={isUpdating || data.status === 'pendente'}
+                      className={`
+                        px-2 py-2 text-xs sm:text-sm font-medium rounded-lg
+                        transition-all flex items-center justify-center space-x-1
+                        ${data.status === 'pendente'
+                          ? 'bg-brand-lighter text-brand-gray cursor-not-allowed opacity-50'
+                          : 'bg-brand-lighter/50 text-brand-gray hover:bg-brand-lighter'
+                        }
+                      `}
+                    >
+                      <span>○</span>
+                      <span className="hidden sm:inline">Pendente</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleStatusUpdate('em_andamento')}
+                      disabled={isUpdating || data.status === 'em_andamento'}
+                      className={`
+                        px-2 py-2 text-xs sm:text-sm font-medium rounded-lg
+                        transition-all flex items-center justify-center space-x-1
+                        ${data.status === 'em_andamento'
+                          ? 'bg-blue-100 text-brand-blue cursor-not-allowed opacity-50'
+                          : 'bg-blue-50 text-brand-blue hover:bg-blue-100'
+                        }
+                      `}
+                    >
+                      <span>◐</span>
+                      <span className="hidden sm:inline">Andamento</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleStatusUpdate('concluido')}
+                      disabled={isUpdating || data.status === 'concluido'}
+                      className={`
+                        px-2 py-2 text-xs sm:text-sm font-medium rounded-lg
+                        transition-all flex items-center justify-center space-x-1
+                        ${data.status === 'concluido'
+                          ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                          : 'bg-green-50 text-green-700 hover:bg-green-100'
+                        }
+                      `}
+                    >
+                      <span>●</span>
+                      <span className="hidden sm:inline">Concluído</span>
+                    </button>
+                  </div>
+                </div>
               )}
-              <FileList
-                projetoTimelineId={data.id}
-                canDelete={isEditable}
-                onDelete={onUpdate}
-              />
+
+              {/* Datas - Responsivas */}
+              <div className="grid grid-cols-2 gap-3">
+                {data.data_inicio && (
+                  <div className="bg-brand-lighter/50 rounded-lg p-2">
+                    <p className="text-xs text-brand-gray">Início</p>
+                    <p className="text-sm font-medium text-brand-dark">
+                      {formatDate(data.data_inicio)}
+                    </p>
+                  </div>
+                )}
+                {data.data_conclusao && (
+                  <div className="bg-green-50 rounded-lg p-2">
+                    <p className="text-xs text-green-600">Conclusão</p>
+                    <p className="text-sm font-medium text-green-700">
+                      {formatDate(data.data_conclusao)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Observações - Responsivas */}
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-2">
+                  Observações
+                </label>
+                {isEditable ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={observacoes}
+                      onChange={(e) => setObservacoes(e.target.value)}
+                      placeholder="Adicione observações sobre esta etapa..."
+                      className="w-full px-3 py-2 text-sm border border-brand-light rounded-lg 
+                               focus:ring-2 focus:ring-brand-blue focus:border-transparent
+                               resize-none"
+                      rows={3}
+                    />
+                    <button
+                      onClick={handleSaveObservacoes}
+                      disabled={isUpdating || observacoes === data.observacoes}
+                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white 
+                               bg-brand-blue rounded-lg hover:bg-blue-700 
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               transition-colors"
+                    >
+                      Salvar Observações
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-brand-gray bg-brand-lighter/50 rounded-lg p-3">
+                    {observacoes || 'Nenhuma observação registrada.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Arquivos - Responsivos */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-brand-dark">Arquivos</h4>
+                  {isEditable && (
+                    <button
+                      onClick={() => setShowFileUpload(!showFileUpload)}
+                      className="text-xs text-brand-blue hover:text-blue-700 font-medium"
+                    >
+                      {showFileUpload ? 'Cancelar' : '+ Adicionar'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Upload de arquivos */}
+                {showFileUpload && isEditable && (
+                  <div className="mb-3">
+                    <FileUpload
+                      projetoTimelineId={data.id}
+                      onUploadComplete={() => {
+                        setShowFileUpload(false);
+                        onUpdate();
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Lista de arquivos */}
+                <FileList
+                  projetoTimelineId={data.id}
+                  canDelete={isEditable}
+                  onDelete={onUpdate}
+                />
+              </div>
             </div>
           </div>
         )}
+      </div>
+
+      {/* Indicador de progresso mobile */}
+      <div className="lg:hidden mt-2 text-center">
+        <span className="text-xs text-brand-gray">
+          {index + 1} de {totalItems}
+        </span>
       </div>
     </div>
   );
