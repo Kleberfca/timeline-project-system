@@ -94,6 +94,23 @@ export const projetoQueries = {
   },
 
   /**
+   * Busca projeto por ID (dados básicos)
+   */
+  async buscarPorId(id: string) {
+    const { data, error } = await supabase
+      .from('projetos')
+      .select(`
+        *,
+        cliente:clientes(*)
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    return data as Projeto;
+  },
+
+  /**
    * Busca projeto por ID com timeline
    */
   async buscarComTimeline(id: string) {

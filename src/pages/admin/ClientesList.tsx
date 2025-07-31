@@ -67,10 +67,10 @@ export const ClientesList: React.FC = () => {
       );
     }
 
-    // Ordenação
+// Ordenação
     filtered.sort((a, b) => {
-      let aValue = a[sortField] || '';
-      let bValue = b[sortField] || '';
+      let aValue: string | number = a[sortField] || '';
+      let bValue: string | number = b[sortField] || '';
       
       if (sortField === 'created_at') {
         aValue = new Date(aValue).getTime();
