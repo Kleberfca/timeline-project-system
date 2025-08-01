@@ -92,11 +92,8 @@ export const Login: React.FC = () => {
             )}
             
             <h2 className="mt-6 text-2xl sm:text-3xl font-bold text-brand-dark">
-              Bem-vindo de volta
+              Bem-vindo
             </h2>
-            <p className="mt-2 text-sm sm:text-base text-brand-gray">
-              Acesse sua conta para continuar
-            </p>
           </div>
 
           {/* Card do formulário */}
@@ -213,17 +210,6 @@ export const Login: React.FC = () => {
                   </button>
                 </div>
               </form>
-
-              {/* Demo credentials para desenvolvimento */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-800 font-medium mb-2">Credenciais de Teste:</p>
-                  <div className="space-y-1 text-xs text-blue-700">
-                    <p>Admin: admin@teste.com / 123456</p>
-                    <p>Cliente: cliente@teste.com / 123456</p>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Footer do card */}
@@ -240,20 +226,12 @@ export const Login: React.FC = () => {
               </p>
             </div>
           </div>
-
-          {/* Link de suporte */}
-          <p className="mt-6 text-center text-sm text-brand-gray">
-            Problemas para acessar?{' '}
-            <a href="#" className="font-medium text-brand-blue hover:text-blue-700">
-              Entre em contato com o suporte
-            </a>
-          </p>
         </div>
       </div>
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-brand-gray">
-        <p>&copy; 2024 Timeline Project System. Todos os direitos reservados.</p>
+        <p>&copy; 2025 Timeline Project System. Todos os direitos reservados.</p>
       </footer>
     </div>
   );

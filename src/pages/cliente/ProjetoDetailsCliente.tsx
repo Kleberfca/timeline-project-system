@@ -165,7 +165,7 @@ export const ProjetoDetailsCliente: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-brand-dark">Email</p>
-                <p className="text-sm text-brand-gray">suporte@empresa.com</p>
+                <p className="text-sm text-brand-gray">contato@tryum.com.br</p>
               </div>
             </div>
             
@@ -177,7 +177,7 @@ export const ProjetoDetailsCliente: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-brand-dark">Telefone</p>
-                <p className="text-sm text-brand-gray">(11) 1234-5678</p>
+                <p className="text-sm text-brand-gray">(48) 99112-9452</p>
               </div>
             </div>
           </div>

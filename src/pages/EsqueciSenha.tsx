@@ -202,22 +202,12 @@ export const EsqueciSenha: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Informações adicionais */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-brand-gray">
-              Ainda com problemas?{' '}
-              <a href="#" className="font-medium text-brand-blue hover:text-blue-700">
-                Entre em contato com o suporte
-              </a>
-            </p>
-          </div>
         </div>
       </div>
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-brand-gray">
-        <p>&copy; 2024 Timeline Project System. Todos os direitos reservados.</p>
+        <p>&copy; 2025 Timeline Project System. Todos os direitos reservados.</p>
       </footer>
     </div>
   );
