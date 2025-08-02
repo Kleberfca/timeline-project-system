@@ -2,9 +2,10 @@
 /**
  * Layout principal da aplicação
  * Wrapper com header e área de conteúdo
+ * Otimizado: Evita re-renders desnecessários
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Header } from './Header';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -12,8 +13,14 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user } = useAuth();
+// Usa memo para evitar re-renders desnecessários
+export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
+  const { user, loading } = useAuth();
+
+  // Durante o loading inicial, não renderiza nada
+  if (loading && !user) {
+    return <>{children}</>;
+  }
 
   // Se não há usuário logado, não mostra o layout completo
   if (!user) {
@@ -28,4 +35,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
     </div>
   );
-};
+});
+
+Layout.displayName = 'Layout';
